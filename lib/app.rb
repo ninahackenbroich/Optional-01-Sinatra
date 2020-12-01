@@ -1,12 +1,40 @@
-require_relative "cookbook" # You need to create this file!
-require_relative "controller" # You need to create this file!
-require_relative "router"
+require "sinatra"
+require "sinatra/reloader" if development?
+require "pry-byebug"
+require "better_errors"
+configure :development do
+  use BetterErrors::Middleware
+  BetterErrors.application_root = File.expand_path('..', __FILE__)
+end
 
-CSV_FILE = File.join(File.dirname(__FILE__), "recipes.csv")
-cookbook = Cookbook.new(CSV_FILE)
-controller = Controller.new(cookbook)
+require_relative "cookbook"
+require_relative "recipe"
 
-router = Router.new(controller)
+get '/' do
+  cookbook = Cookbook.new(File.join(__dir__, 'recipes.csv'))
+  @recipes = cookbook.all
+  erb :index
+end
 
-# Start the app
-router.run
+get '/new' do
+  erb :new
+end
+
+post '/recipes' do
+  cookbook = Cookbook.new(File.join(__dir__, 'recipes.csv'))
+  recipe = Recipe.new(params)
+  cookbook.add(recipe)
+  redirect to '/'
+end
+
+get '/recipes/delete/:index' do
+  cookbook = Cookbook.new(File.join(__dir__, 'recipes.csv'))
+  cookbook.remove_at(params[:index].to_i)
+  redirect to '/'
+end
+
+get '/recipes/done/:index' do
+  cookbook = Cookbook.new(File.join(__dir__, 'recipes.csv'))
+  cookbook.mark_recipe_as_done(params[:index].to_i)
+  redirect to '/'
+end
